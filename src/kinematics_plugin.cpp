@@ -60,6 +60,7 @@
 #include <type_traits>
 
 #include "bio_ik/parameters.hpp"
+#include "ik_common/dynamically_adjustable_ik.hpp"
 
 using namespace bio_ik;
 
@@ -118,7 +119,7 @@ void poseMsgToEigen(const geometry_msgs::msg::Pose &msg,
 
 namespace bio_ik_kinematics_plugin {
 
-struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
+struct BioIKKinematicsPlugin : kinematics::KinematicsBase, public ik_common::DynamicallyAdjustableIK {
   rclcpp::Node::SharedPtr node_;
   std::vector<std::string> joint_names, link_names;
   const moveit::core::JointModelGroup *joint_model_group;
@@ -318,6 +319,14 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
                 search_discretization);
     load(group_name);
     return true;
+  }
+
+  virtual void setOrientationVsPositionWeight(double ori_vs_pos) const override {
+    for (auto &goal : default_goals) {
+      PoseGoal *pg = dynamic_cast<PoseGoal *>(goal.get());
+      if (pg)
+        pg->setRotationScale(ori_vs_pos);
+    }
   }
 
   virtual bool searchPositionIK(
@@ -577,7 +586,7 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase {
     }
 
     // callback?
-    if (!solution_callback.empty()) {
+    if (solution_callback) {
       // run callback
       solution_callback(ik_poses.front(), solution, error_code);
 

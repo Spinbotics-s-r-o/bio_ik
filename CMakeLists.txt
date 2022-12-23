@@ -35,6 +35,9 @@ enable_sanitizers(project_options)
 # enable doxygen
 include(cmake/Doxygen.cmake)
 enable_doxygen()
+add_compile_options($<$<CONFIG:Release>:-O3>)
+add_compile_options($<$<CONFIG:Release>:-ftree-vectorize>)
+add_compile_options($<$<CONFIG:Release>:-ffast-math>)
 
 # allow for static analysis options
 include(cmake/StaticAnalyzers.cmake)
@@ -54,6 +57,7 @@ find_package(rclcpp REQUIRED)
 find_package(tf2_kdl REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(fcl REQUIRED)
+find_package(ik_common REQUIRED)
 
 # TODO(tylerjw): re-enable these
 # find_package(OpenMP)
@@ -106,7 +110,7 @@ set(SOURCES
 add_library(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include> ${tf2_kdl_INCLUDE_DIRS} ${kdl_parser_INCLUDE_DIRS})
+  $<INSTALL_INTERFACE:include> ${tf2_kdl_INCLUDE_DIRS} ${kdl_parser_INCLUDE_DIRS} ${ik_common_INCLUDE_DIRS})
 target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
