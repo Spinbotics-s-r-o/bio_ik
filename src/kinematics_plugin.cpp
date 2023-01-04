@@ -28,6 +28,7 @@
 
 #include <moveit/kinematics_base/kinematics_base.h>
 #include <moveit/rdf_loader/rdf_loader.h>
+#include <pluginlib/class_list_macros.hpp>
 #include <srdfdom/model.h>
 #include <urdf/model.h>
 #include <urdf_model/model.h>
@@ -41,7 +42,6 @@
 #include <bio_ik/problem.hpp>
 #include <bio_ik/utils.hpp>
 #include <kdl_parser/kdl_parser.hpp>
-#include <pluginlib/class_list_macros.hpp>
 
 #include "ik_parallel.hpp"
 
@@ -531,8 +531,8 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase, public ik_common::Dyn
       if (robot_info.isRevolute(ivar) &&
           robot_model_->getMimicJointModels().empty()) {
         auto r = problem.initial_guess[ivar];
-        auto lo = robot_info.getMin(ivar);
-        auto hi = robot_info.getMax(ivar);
+        auto lo = robot_info.getClipMin(ivar);
+        auto hi = robot_info.getClipMax(ivar);
 
         // move close to initial guess
         if (r < v - M_PI || r > v + M_PI) {
@@ -556,10 +556,14 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase, public ik_common::Dyn
         if (v > hi) v = hi;
       }
       state[ivar] = v;
-    }
 
-    // wrap angles
-    robot_model_->enforcePositionBounds(state.data());
+      // wrap angles that are bounded
+      if(robot_info.hasBounds(ivar))
+      {
+        auto* joint_model = robot_model_->getJointOfVariable(static_cast<int>(ivar));
+        joint_model->enforcePositionBounds(state.data() + ivar, joint_model->getVariableBounds());
+      }
+    }
 
     // map result to jointgroup variables
     {
