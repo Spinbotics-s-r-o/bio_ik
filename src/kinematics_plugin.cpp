@@ -439,6 +439,10 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase, public ik_common::Dyn
       // transform tips to baseframe
       tipFrames.clear();
       for (size_t i = 0; i < ik_poses.size(); i++) {
+        if (!std::isfinite(ik_poses[i].orientation.w)) {
+          tipFrames.emplace_back();
+          continue;
+        }
         Eigen::Isometry3d p, r;
         poseMsgToEigen(ik_poses[i], p);
         if (context_state) {
@@ -497,7 +501,8 @@ struct BioIKKinematicsPlugin : kinematics::KinematicsBase, public ik_common::Dyn
       all_goals.clear();
 
       if (!bio_ik_options || !bio_ik_options->replace)
-        for (auto &goal : default_goals) all_goals.push_back(goal.get());
+        for (size_t i = 0; i < default_goals.size() && i < ik_poses.size(); i++)
+          if (std::isfinite(ik_poses[i].orientation.w))all_goals.push_back(default_goals[i].get());
 
       if (bio_ik_options)
         for (auto &goal : bio_ik_options->goals)
